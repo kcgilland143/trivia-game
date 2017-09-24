@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Trivia Trivia</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+</head>
+<body>
+  <div class="container">
+    <header>
+    <h1>Trivia Game!</h1>
+    <hr class="my-2">
+    <button id="startButton" class="btn btn-primary">Start</button>
+    </header>
+    <br>
+    <div class="row" id="trivia">
+      <div id="gameArea" class="col-md-8">
+        <span class="d-block pb-4"><span id="timer" class="h2">30</span> seconds remaining</span>
+        <p class="question h2">In which trivia game is the answer expected to be presented as a question?</p>
+        <button id="skipButton" class="m-4 btn btn-primary">Skip</button>
+        <p id="correctAnswerAlert" class="alert alert-success mt-4"><span class="answerStatus">You've got it!</span> The Correct Answer is
+          <span class="correct-answer">Jeopardy</span></p>
+        <p id="IncorrectAnswerAlert" class="alert alert-danger mt-4"><span class="answerStatus">Incorrect!</span> The Correct Answer is
+          <span class="correct-answer">Jeopardy</span></p>
+      </div>
+      <div class="col-md-4">
+        <ul id="questionOptions" class="list-group">
+          <li class="list-group-item list-group-item-action mb-2">Wheel of Fortune</li>
+          <li class="list-group-item list-group-item-action mb-2">Jeopardy</li>
+          <li class="list-group-item list-group-item-action mb-2">Answer 3</li>
+          <li class="list-group-item list-group-item-action mb-2">Answer 4</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous">
+  </script>
+  <script src="assets/js/game.js"></script>
+</body>
+</html>
