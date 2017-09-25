@@ -1,6 +1,7 @@
 /* eslint-env jquery */
 
 $.when($.ready).then(function () {
+  game.questions = questionHandler.getQuestions().questions
   $('.alert, #answerStats, #skipButton').hide()
   $('#timer').parent().hide()
   $('#questionOptions').children().each(function () {
@@ -16,6 +17,7 @@ $.when($.ready).then(function () {
     game.nextQuestion().render()
   })
   $('#startButton').on('click', function () {
+    questionHandler.getQuestions()
     game.init().render()
     timer.setCallback(game.tick.bind(game)).restart()
     $('#timer').parent().show()
@@ -26,14 +28,33 @@ $.when($.ready).then(function () {
 var be = {}
 be.questions = [{
   question: 'hoo',
-  correctAnswer: 'hya',
-  incorrectAnswers: ['hi', 'ho', 'he']
+  correctAnswer: 'me',
+  incorrectAnswers: ['mi', 'mo', 'he']
 },
 {
   question: 'boo',
-  correctAnswer: 'bya',
+  correctAnswer: 'ya',
   incorrectAnswers: ['hi', 'ho', 'he']
 }]
+
+var questionHandler = {
+  url: 'https://opentdb.com/api.php',
+  query: '?amount=10&category=9&difficulty=easy&type=multiple',
+  questions: [],
+
+  getQuestions: function () {
+    //  $.ajax
+    $.ajax({
+      url: this.url + this.query,
+      method: 'GET',
+    }).done(function (response) {
+      for (var i = 0; i < response.results.length; i++) {
+        questionHandler.questions.push(new Question(response.results[i]))
+      }
+    })
+    return this
+  },
+}
 
 var question = {
   question: 'What is your name?',
@@ -63,7 +84,7 @@ var question = {
   selectAnswer: function (index) {
     if (!this.isAnswered()) {
       this.selectedAnswer = index
-      console.log('selectedAnswer', this.selectedAnswer)
+      console.log('selectedAnswer', this.answerOptions[this.selectedAnswer])
     }
     return this
   },
@@ -91,9 +112,9 @@ var question = {
     $('#questionOptions')
       .children()
       .each(function (i) {
-        $(this).data('index', rArr[i][0]).text(rArr[i][1])
+        $(this).data('index', rArr[i][0]).html(rArr[i][1])
       })
-    $('#question').text(this.question)
+    $('#question').html(this.question)
     $('#timer').text(this.timeoutSeconds)
   },
 
@@ -110,8 +131,8 @@ function Question (questionText, correctAnswers, incorrectAnswers) {
   this.incorrectAnswers = incorrectAnswers || question.incorrectAnswers
   if (typeof questionText === 'object') {
     this.question = questionText.question
-    this.correctAnswer = questionText.correctAnswer
-    this.incorrectAnswers = questionText.incorrectAnswers
+    this.correctAnswer = questionText.correctAnswer || questionText.correct_answer
+    this.incorrectAnswers = questionText.incorrectAnswers || questionText.incorrect_answers
   }
   return this
 }
@@ -150,6 +171,7 @@ var game = {
 
   init: function initializeGame () {
     this.gameOver = false
+    console.log(this.questions)
     this.unansweredQuestions = this.questions.slice(0, 10)
     for (var i = 0; i < this.questions.length; i++) {
       this.questions[i].reset()
