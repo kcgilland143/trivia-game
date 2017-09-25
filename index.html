@@ -15,15 +15,19 @@
     <br>
     <div class="row" id="trivia">
       <div id="gameArea" class="col-md-8">
-        <span class="d-block pb-4"><span id="timer" class="h2">30</span> seconds remaining</span>
+        <span class="d-block pb-2"><span id="timer" class="h2">30</span> seconds remaining</span>
         <p id="question" class="h2">In which trivia game is the answer expected to be presented as a question?</p>
-        <button id="skipButton" class="m-4 btn btn-primary">Skip</button>
+        <button id="skipButton" class="m-4 float-right btn btn-primary">Skip</button>
         <p id="correctAnswerAlert" class="alert alert-success mt-4"><span class="answerStatus">You've got it!</span> The Correct Answer is
           <span class="correct-answer">Jeopardy</span></p>
         <p id="incorrectAnswerAlert" class="alert alert-danger mt-4"><span class="answerStatus">Incorrect!</span> The Correct Answer is
           <span class="correct-answer">Jeopardy</span></p>
       </div>
       <div class="col-md-4">
+        <div id="answerStats" class="m-4">
+          <span class="mx-4">Correct: <span id="correctAnswers"></span></span>
+          <span class="mx-4">Incorrect: <span id="incorrectAnswers"></span></span>
+        </div>
         <ul id="questionOptions" class="list-group">
           <li class="list-group-item list-group-item-action mb-2">Wheel of Fortune</li>
           <li class="list-group-item list-group-item-action mb-2">Jeopardy</li>

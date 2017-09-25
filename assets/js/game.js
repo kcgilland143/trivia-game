@@ -1,21 +1,23 @@
 /* eslint-env jquery */
 
 $.when($.ready).then(function () {
-  $('.alert').each(function () { $(this).hide() })
+  $('.alert, #answerStats, #skipButton').hide()
   $('#questionOptions').children().each(function () {
     $(this).on('click', function () {
       if (!game.question.isAnswered()) {
         var index = $(this).data('index')
-        timer.stop()
         game.question.selectAnswer(index).checkAnswer()
-        game.render().delayNextQuestion()
+        game.tick()
       }
     })
   })
-
+  $('#skipButton').on('click', function () {
+    game.nextQuestion()
+  })
   $('#startButton').on('click', function () {
     game.init().render()
     timer.restart()
+    $(this).hide()
   })
 })
 
@@ -95,13 +97,7 @@ function Question () {
 var timer = {
   timer: 0,
   interval: 1000,
-  callback: function () {
-    if (game.question.timeout() || game.question.isAnswered()) {
-      game.delayNextQuestion()
-      timer.stop()
-    }
-    game.render()
-  },
+  callback: function () { game.tick() },
   setCallback: function (callback) {
     this.callback = callback
     return this
@@ -130,8 +126,22 @@ var game = {
   init: function initializeGame () {
     this.gameOver = false
     this.unansweredQuestions = this.questions.slice(0, 10)
+    for (var i = 0; i < this.questions.length; i++) {
+      this.questions[i].reset()
+    }
     this.nextQuestion()
     return this
+  },
+
+  tick: function gameTick () {
+    if (this.question.timeout() || this.question.isAnswered()) {
+      if (this.question.answerStatus === true) {
+        this.correctAnswers++
+      } else { this.incorrectAnswers++ }
+      this.delayNextQuestion()
+      timer.stop()
+    }
+    this.render()
   },
 
   nextQuestion: function getNextGameQuestion () {
@@ -144,14 +154,10 @@ var game = {
     } else { this.gameOver = true; this.render(); return this }
 
     if (this.question) {
-      this.question.compileOptions().reset()
-      timer.setCallback(function () {
-        if (this.question.timeout() || this.question.isAnswered()) {
-          this.delayNextQuestion()
-          timer.stop()
-        }
-        this.render()
-      }.bind(this)).restart()
+      this.question.compileOptions() //.reset()
+      timer.restart()
+      // timer.setCallback(this.tick.bind(this)).restart()
+      this.render()
     }
     return this
   },
@@ -180,19 +186,25 @@ var game = {
           $(this).addClass('list-group-item-danger')
         }
       })
+      $('#skipButton').hide()
     } else {
+      $('#skipButton').show()
       this.questionOptionElements.each(function () {
         this.className = 'list-group-item list-group-item-action mb-2'
       })
       this.alertElements.each(function () { $(this).hide() })
     }
+    $('#answerStats').show()
+    $('#correctAnswers').text(this.correctAnswers)
+    $('#incorrectAnswers').text(this.incorrectAnswers)
   },
 
   render: function renderGame () {
     if (!this.gameOver) {
       this.question.render()
-      this.decorateAnswer()
-    } else { console.log('Game Over'); timer.stop() }
+      // this.decorateAnswer()
+    } else { console.log('Game Over'); $('#startButton').show() }
+    this.decorateAnswer()
     return this
   }
 }
