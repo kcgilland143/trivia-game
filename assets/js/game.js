@@ -2,6 +2,7 @@
 
 $.when($.ready).then(function () {
   $('.alert, #answerStats, #skipButton').hide()
+  $('#timer').parent().hide()
   $('#questionOptions').children().each(function () {
     $(this).on('click', function () {
       if (!game.question.isAnswered()) {
@@ -17,6 +18,7 @@ $.when($.ready).then(function () {
   $('#startButton').on('click', function () {
     game.init().render()
     timer.restart()
+    $('#timer').parent().show()
     $(this).hide()
   })
 })
