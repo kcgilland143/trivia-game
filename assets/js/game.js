@@ -13,15 +13,27 @@ $.when($.ready).then(function () {
     })
   })
   $('#skipButton').on('click', function () {
-    game.nextQuestion()
+    game.nextQuestion().render()
   })
   $('#startButton').on('click', function () {
     game.init().render()
-    timer.restart()
+    timer.setCallback(game.tick.bind(game)).restart()
     $('#timer').parent().show()
     $(this).hide()
   })
 })
+
+var be = {}
+be.questions = [{
+  question: 'hoo',
+  correctAnswer: 'hya',
+  incorrectAnswers: ['hi', 'ho', 'he']
+},
+{
+  question: 'boo',
+  correctAnswer: 'bya',
+  incorrectAnswers: ['hi', 'ho', 'he']
+}]
 
 var question = {
   question: 'What is your name?',
@@ -91,14 +103,23 @@ var question = {
     return this
   }
 }
-function Question () {
+function Question (questionText, correctAnswers, incorrectAnswers) {
   Object.setPrototypeOf(this, question)
+  this.questionText = questionText || question.questionText
+  this.correctAnswers = correctAnswers || question.correctAnswers
+  this.incorrectAnswers = incorrectAnswers || question.incorrectAnswers
+  if (typeof questionText === 'object') {
+    this.question = questionText.question
+    this.correctAnswer = questionText.correctAnswer
+    this.incorrectAnswers = questionText.incorrectAnswers
+  }
   return this
 }
 
 var timer = {
   timer: 0,
   interval: 1000,
+  isRunning: false,
   callback: function () { game.tick() },
   setCallback: function (callback) {
     this.callback = callback
@@ -109,16 +130,18 @@ var timer = {
   },
   start: function startTimer () {
     this.timer = setInterval(this.callback, this.interval)
+    this.isRunning = true
     return this
   },
   stop: function stopTimer () {
     clearInterval(this.timer)
+    this.isRunning = false
     return this
   }
 }
 
 var game = {
-  questions: [new Question(), new Question(), new Question()],
+  questions: [new Question(), new Question(be.questions[0]), new Question(be.questions[1])],
   unansweredQuestions: [],
   correctAnswers: 0,
   incorrectAnswers: 0,
@@ -149,6 +172,7 @@ var game = {
   nextQuestion: function getNextGameQuestion () {
     if (this.question && !this.question.isAnswered()) {
       this.unansweredQuestions.unshift(this.question)
+      this.question = false
     }
 
     if (this.unansweredQuestions.length) {
@@ -156,8 +180,8 @@ var game = {
     } else { this.gameOver = true; this.render(); return this }
 
     if (this.question) {
-      this.question.compileOptions() //.reset()
-      timer.restart()
+      if (!this.question.answerOptions.length) { this.question.compileOptions() } // .reset()
+      if (!timer.isRunning) { timer.start() }
       // timer.setCallback(this.tick.bind(this)).restart()
       this.render()
     }
