@@ -281,7 +281,7 @@ var game = {
 
   delayNextQuestion: function delayedGetNextGameQuestion () {
     timer.stop()
-    setTimeout(this.nextQuestion.bind(this), 5000)
+    setTimeout(this.nextQuestion.bind(this), 3000)
     return this
   },
 
@@ -323,7 +323,7 @@ var game = {
       $('#startButton').show()
       $('#timer').parent().hide()
       if (this.question) { // game is over
-        setTimeout(() => getGIF('Game Over'), 3000)
+        getGIF('Game Over')
         $('#question').append('<br><br> Game Over!')
       } else { // game has not started
         getGIF('Welcome')
@@ -364,7 +364,7 @@ function objectsHaveSameProperties (obj1, obj2, propNames) {
 
 function getGIF (word, targetImg) {
   targetImg = targetImg || $('#questionImage')
-  var offset = Math.floor(Math.random() * 5)
+  var offset = Math.floor(Math.random() * 3)
   var query = encodeURI(`?api_key=z3v6r9kDtDmjiyrhzJjciMd7WosSpw3B&q=${word}&limit=1&offset=${offset}&rating=G&lang=en`)
   $.ajax({
     url: `https://api.giphy.com/v1/gifs/search${query}`,
