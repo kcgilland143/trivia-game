@@ -1,9 +1,23 @@
 /* eslint-env jquery */
+var be = {}
+be.questions = [{
+  question: 'hoo',
+  correctAnswer: 'me',
+  incorrectAnswers: ['mi', 'mo', 'he']
+},
+{
+  question: 'boo',
+  correctAnswer: 'ya',
+  incorrectAnswers: ['hi', 'ho', 'he']
+}]
 
+//start sequence
 $.when($.ready).then(function () {
-  game.questions = questionHandler.getQuestions().questions
+  game.render()
+  game.questions = questionHandler.unansweredQuestions
+  be.questions.forEach(i => questionHandler.addQuestion(i))
   $('.alert, #answerStats, #skipButton').hide()
-  $('#timer').parent().hide()
+
   $('#questionOptions').children().each(function () {
     $(this).on('click', function () {
       if (!game.question.isAnswered()) {
@@ -17,43 +31,99 @@ $.when($.ready).then(function () {
     game.nextQuestion().render()
   })
   $('#startButton').on('click', function () {
-    questionHandler.getQuestions()
-    game.init().render()
-    timer.setCallback(game.tick.bind(game)).restart()
-    $('#timer').parent().show()
+    questionHandler.getQuestions().done(function (resp) {
+      if (resp) {
+        resp.results.forEach(q => questionHandler.addQuestion(q))
+        game.init().render()
+      }
+    })
+    timer.restart()
     $(this).hide()
   })
 })
 
-var be = {}
-be.questions = [{
-  question: 'hoo',
-  correctAnswer: 'me',
-  incorrectAnswers: ['mi', 'mo', 'he']
-},
-{
-  question: 'boo',
-  correctAnswer: 'ya',
-  incorrectAnswers: ['hi', 'ho', 'he']
-}]
-
 var questionHandler = {
   url: 'https://opentdb.com/api.php',
-  query: '?amount=10&category=9&difficulty=easy&type=multiple',
+  query: `?amount=10&difficulty=${randomizedArray(['easy', 'medium'])[0]}&type=multiple&category=9`,
   questions: [],
+  unansweredQuestions: [],
+  resetMethods: ['incorrect', 'unanswered', 'all'], // incorrect, unanswered(timed out), all
 
-  getQuestions: function () {
+  getQuestions: function asyncGetQuestions () {
     //  $.ajax
-    $.ajax({
+    return $.ajax({
       url: this.url + this.query,
-      method: 'GET',
-    }).done(function (response) {
-      for (var i = 0; i < response.results.length; i++) {
-        questionHandler.questions.push(new Question(response.results[i]))
+      method: 'GET'
+    })
+    // .done(function (response) {
+    //   for (var i = 0; i < response.results.length; i++) {
+    //     questionHandler.questions.push(new Question(response.results[i]))
+    //   }
+    // })
+    // return this
+  },
+
+  reset: function resetQuestionsByMethod (method) {
+    switch (method.toLowerCase()) {
+      case 'all':
+        this.resetAll()
+        break
+      case 'incorrect':
+        this.resetIncorrect()
+        break
+      case 'unanswered':
+        this.resetUnanswered()
+        break
+    }
+  },
+
+  resetAll: function resetAllQuestions () {
+    this.questions.forEach(q => q.reset())
+  },
+
+  resetIncorrect: function resetIncorrectQuestions () {
+    this.questions.forEach(q => {
+      if (q.isAnswered() && !q.answerStatus) {
+        q.reset()
       }
     })
+  },
+
+  resetUnanswered: function resetUnansweredQuestions () {
+    this.questions.forEach(q => {
+      if (q.selectedAnswer === -1) {
+        q.reset()
+      }
+    })
+  },
+
+  addQuestion: function addQuestion (obj) {
+    var question = new Question(obj).compileOptions()
+    var propNames = ['question', 'correctAnswer', 'incorrectAnswers']
+    if (!this.questions.some(f => {
+      return objectsHaveSameProperties(f, question, propNames)
+    })) { this.questions.push(question) }
     return this
   },
+
+  getUnanswered: function getUnansweredQuestions () {
+    var res = []
+    this.questions.forEach(q => {
+      if (!q.isAnswered()) { res.push(q)}
+    })
+    this.unansweredQuestions = res
+    return this
+  },
+
+  selectUnansweredMin: function (min) {
+    this.resetMethods.forEach(i => {
+      if (this.getUnanswered().unansweredQuestions.length < min) {
+        console.log(this.unansweredQuestions)
+        this.reset(i)
+      }
+    })
+    return this.unansweredQuestions.slice(0, min)
+  }
 }
 
 var question = {
@@ -120,20 +190,20 @@ var question = {
 
   reset: function resetQuestionAnswerData () {
     [this.selectedAnswer, this.answerStatus] = [false, false]
-    this.timeoutSeconds = 10
+    this.timeoutSeconds = question.timeoutSeconds
     return this
   }
 }
-function Question (questionText, correctAnswers, incorrectAnswers) {
-  Object.setPrototypeOf(this, question)
+function Question (questionText, correctAnswer, incorrectAnswers) {
   this.questionText = questionText || question.questionText
-  this.correctAnswers = correctAnswers || question.correctAnswers
+  this.correctAnswer = correctAnswer || question.correctAnswer
   this.incorrectAnswers = incorrectAnswers || question.incorrectAnswers
   if (typeof questionText === 'object') {
     this.question = questionText.question
     this.correctAnswer = questionText.correctAnswer || questionText.correct_answer
     this.incorrectAnswers = questionText.incorrectAnswers || questionText.incorrect_answers
   }
+  Object.setPrototypeOf(this, question)
   return this
 }
 
@@ -150,8 +220,10 @@ var timer = {
     return this.stop().start()
   },
   start: function startTimer () {
-    this.timer = setInterval(this.callback, this.interval)
-    this.isRunning = true
+    if (!this.isRunning) {
+      this.timer = setInterval(this.callback, this.interval)
+      this.isRunning = true
+    }
     return this
   },
   stop: function stopTimer () {
@@ -162,20 +234,22 @@ var timer = {
 }
 
 var game = {
-  questions: [new Question(), new Question(be.questions[0]), new Question(be.questions[1])],
+  questions: [new Question()],
   unansweredQuestions: [],
   correctAnswers: 0,
   incorrectAnswers: 0,
+  gameOver: true,
   questionOptionElements: $('#questionOptions').children(),
   alertElements: $('.alert'),
 
   init: function initializeGame () {
     this.gameOver = false
+    this.questions = questionHandler.selectUnansweredMin(10)
     console.log(this.questions)
-    this.unansweredQuestions = this.questions.slice(0, 10)
-    for (var i = 0; i < this.questions.length; i++) {
-      this.questions[i].reset()
-    }
+    this.unansweredQuestions = randomizedArray(this.questions).slice()
+    // for (var i = 0; i < this.questions.length; i++) {
+    //   this.questions[i].reset()
+    // }
     this.nextQuestion()
     return this
   },
@@ -186,8 +260,8 @@ var game = {
         this.correctAnswers++
       } else { this.incorrectAnswers++ }
       this.delayNextQuestion()
-      timer.stop()
     }
+    if (this.gameOver) { timer.stop() }
     this.render()
   },
 
@@ -197,12 +271,19 @@ var game = {
       this.question = false
     }
 
-    if (this.unansweredQuestions.length) {
+    if (this.unansweredQuestions.length && !this.gameOver) {
       this.question = this.unansweredQuestions.pop()
-    } else { this.gameOver = true; this.render(); return this }
+    } else {
+      this.gameOver = true
+      timer.stop()
+      this.render()
+      return this
+    }
 
     if (this.question) {
-      if (!this.question.answerOptions.length) { this.question.compileOptions() } // .reset()
+      if (!this.question.answerOptions.length) {
+        this.question.compileOptions()
+      } // .reset()
       if (!timer.isRunning) { timer.start() }
       // timer.setCallback(this.tick.bind(this)).restart()
       this.render()
@@ -211,47 +292,66 @@ var game = {
   },
 
   delayNextQuestion: function delayedGetNextGameQuestion () {
-    setTimeout(this.nextQuestion.bind(this), 2000)
+    timer.stop()
+    setTimeout(this.nextQuestion.bind(this), 5000)
     return this
   },
 
   decorateAnswer: function decorateAnswer () {
-    if (this.question && this.question.isAnswered()) {
-      if (this.question.answerStatus === false) {
-        this.alertElements
-          .filter('#incorrectAnswerAlert')
-          .show()
-          .children('.answerStatus')
-          .text(this.question.selectedAnswer === -1
-            ? "Time's up!" : 'Incorrect!')
-      } else { this.alertElements.filter('#correctAnswerAlert').show() }
-      $('.correct-answer').text(this.question.correctAnswer)
+    if (!this.gameOver){
+      if (this.question && this.question.isAnswered()) {
+        getGIF(this.question.correctAnswer)
+        if (this.question.answerStatus === false) {
+          this.alertElements
+            .filter('#incorrectAnswerAlert')
+            .show()
+            .children('.answerStatus')
+            .text(this.question.selectedAnswer === -1
+              ? "Time's up!" : 'Incorrect!')
+        } else { this.alertElements.filter('#correctAnswerAlert').show() }
+        $('.correct-answer').html(this.question.correctAnswer)
 
-      $('#questionOptions').children().each(function () {
-        var id = $(this).removeClass('list-group-item-action').data('index')
-        if (id === 0) { $(this).addClass('list-group-item-success') } else
-        if (id === game.question.selectedAnswer) {
-          $(this).addClass('list-group-item-danger')
-        }
-      })
-      $('#skipButton').hide()
+        $('#questionOptions').children().each(function () {
+          var id = $(this).removeClass('list-group-item-action').data('index')
+          if (id === 0) { $(this).addClass('list-group-item-success') } else
+          if (id === game.question.selectedAnswer) {
+            $(this).addClass('list-group-item-danger')
+          }
+        })
+        $('#skipButton').hide()
+      } else {
+        $('#questionImage').attr('src', '#').hide()
+        $('#skipButton').show()
+        this.questionOptionElements.each(function () {
+          this.className = 'list-group-item list-group-item-action mb-2'
+        })
+        this.alertElements.each(function () { $(this).hide() })
+      }
+      $('#timer').parent().show()
+      $('#answerStats').show()
+      $('#correctAnswers').text(this.correctAnswers)
+      $('#incorrectAnswers').text(this.incorrectAnswers)
     } else {
-      $('#skipButton').show()
-      this.questionOptionElements.each(function () {
-        this.className = 'list-group-item list-group-item-action mb-2'
-      })
-      this.alertElements.each(function () { $(this).hide() })
+      $('#startButton').show()
+      $('#timer').parent().hide()
+      if (this.question) { //game is over
+        setTimeout(() => getGIF('Game Over'), 3000)
+        $('#question').append('<br><br> Game Over!')
+      } else { //game has not started
+        getGIF('Welcome')
+      }
     }
-    $('#answerStats').show()
-    $('#correctAnswers').text(this.correctAnswers)
-    $('#incorrectAnswers').text(this.incorrectAnswers)
   },
 
   render: function renderGame () {
-    if (!this.gameOver) {
+    if (this.question) {
       this.question.render()
-      // this.decorateAnswer()
-    } else { console.log('Game Over'); $('#startButton').show() }
+    }
+    //} else {
+      // console.log('Game Over')
+      // $('#startButton').show()
+      // $('#timer').parent().hide()
+   // }
     this.decorateAnswer()
     return this
   }
@@ -267,4 +367,30 @@ function randomizedArray (arr) {
   }
   console.log(tmpArr)
   return tmpArr
+}
+
+function objectsHaveSameProperties (obj1, obj2, propNames) {
+  var l = propNames
+  if (!l.length) {
+    l = Object.getOwnPropertyNames(obj1)
+    var r = Object.getOwnPropertyNames(obj2)
+    if (l.length !== r.length) { return false }
+  }
+  return l.every(p => { return obj1[p] === obj2[p] })
+}
+
+function getGIF (word) {
+  var offset = Math.floor(Math.random() * 5)
+  var query = encodeURI(`?api_key=z3v6r9kDtDmjiyrhzJjciMd7WosSpw3B&q=${word}&limit=1&offset=${offset}&rating=G&lang=en`)
+  $.ajax({
+    url: `https://api.giphy.com/v1/gifs/search${query}`,
+    method: 'GET'
+  }).done(r => {
+    let img = r.data[0].images.downsized
+    $('#questionImage')
+      .attr('src', img.url)
+      .attr('width', img.width)
+      .attr('height', img.height)
+      .show()
+  })
 }
