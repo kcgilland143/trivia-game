@@ -261,6 +261,7 @@ var game = {
 
     if (this.unansweredQuestions.length && !this.gameOver) {
       this.question = this.unansweredQuestions.pop()
+      getGIF(this.question.correctAnswer).hide()
     } else {
       this.gameOver = true
       timer.stop()
@@ -287,7 +288,6 @@ var game = {
   decorateAnswer: function decorateAnswer () {
     if (!this.gameOver) {
       if (this.question && this.question.isAnswered()) {
-        getGIF(this.question.correctAnswer)
         if (this.question.answerStatus === false) {
           this.alertElements
             .filter('#incorrectAnswerAlert')
@@ -306,8 +306,9 @@ var game = {
           }
         })
         $('#skipButton').hide()
+        $('#questionImage').show()
       } else {
-        $('#questionImage').attr('src', '#').hide()
+        $('#questionImage').hide()
         $('#skipButton').show()
         this.questionOptionElements.each(function () {
           this.className = 'list-group-item list-group-item-action mb-2'
@@ -361,7 +362,8 @@ function objectsHaveSameProperties (obj1, obj2, propNames) {
   return l.every(p => { return obj1[p] === obj2[p] })
 }
 
-function getGIF (word) {
+function getGIF (word, targetImg) {
+  targetImg = targetImg || $('#questionImage')
   var offset = Math.floor(Math.random() * 5)
   var query = encodeURI(`?api_key=z3v6r9kDtDmjiyrhzJjciMd7WosSpw3B&q=${word}&limit=1&offset=${offset}&rating=G&lang=en`)
   $.ajax({
@@ -369,12 +371,12 @@ function getGIF (word) {
     method: 'GET'
   }).done(r => {
     let img = r.data[0].images.downsized
-    $('#questionImage')
+    targetImg
       .attr('src', img.url)
       .attr('width', img.width)
       .attr('height', img.height)
-      .show()
   })
+  return targetImg
 }
 
 function * indexGen (length) {
