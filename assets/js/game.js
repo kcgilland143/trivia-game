@@ -18,7 +18,7 @@ $.when($.ready).then(function () {
   be.questions.forEach(i => questionHandler.addQuestion(i))
   $('.alert, #answerStats, #skipButton').hide()
 
-  $('#questionOptions').on('click','li', function () {
+  $('#questionOptions').on('click', 'li', function () {
     if (!game.question.isAnswered()) {
       var index = $(this).data('index')
       game.question.selectAnswer(index)
@@ -101,18 +101,17 @@ var questionHandler = {
   getUnanswered: function getUnansweredQuestions () {
     var res = []
     this.questions.forEach(q => {
-      if (!q.isAnswered()) { res.push(q)}
+      if (!q.isAnswered()) { res.push(q) }
     })
+    console.log(res)
     this.unansweredQuestions = res
     return this
   },
 
   selectUnansweredMin: function (min) {
-    this.resetMethods.forEach(i => {
-      if (this.getUnanswered().unansweredQuestions.length < min) {
-        console.log(this.unansweredQuestions)
-        this.reset(i)
-      }
+    this.resetMethods.every(i => {
+      this.reset(i)
+      return this.getUnanswered().unansweredQuestions.length < min
     })
     return this.unansweredQuestions.slice(0, min)
   }
@@ -120,7 +119,7 @@ var questionHandler = {
 
 var question = {
   question: 'What is your name?',
-  timeoutSeconds: 10,
+  timeoutSeconds: 20,
   correctAnswer: 'Kevin',
   incorrectAnswers: ['Robert', 'Lawrence', 'Bonnie'],
   answerOptions: [],
@@ -182,19 +181,19 @@ var question = {
 
   reset: function resetQuestionAnswerData () {
     [this.selectedAnswer, this.answerStatus] = [false, false]
+    console.log('reset', this.question)
     this.timeoutSeconds = question.timeoutSeconds
     return this
   }
 }
 function Question (questionText, correctAnswer, incorrectAnswers) {
-  this.questionText = questionText || question.questionText
   this.correctAnswer = correctAnswer || question.correctAnswer
   this.incorrectAnswers = incorrectAnswers || question.incorrectAnswers
   if (typeof questionText === 'object') {
     this.question = questionText.question
     this.correctAnswer = questionText.correctAnswer || questionText.correct_answer
     this.incorrectAnswers = questionText.incorrectAnswers || questionText.incorrect_answers
-  }
+  } else { this.question = questionText || question.question }
   Object.setPrototypeOf(this, question)
   return this
 }
@@ -237,7 +236,6 @@ var game = {
   init: function initializeGame () {
     this.gameOver = false
     this.questions = questionHandler.selectUnansweredMin(10)
-    console.log(this.questions)
     this.unansweredQuestions = randomizedArray(this.questions).slice()
     this.nextQuestion()
     return this
@@ -349,7 +347,7 @@ function randomizedArray (arr) {
     rIndex = Math.floor(Math.random() * arrCopy.length)
     tmpArr.push(arrCopy.splice(rIndex, 1)[0])
   }
-  console.log(tmpArr)
+  // console.log(tmpArr)
   return tmpArr
 }
 
@@ -379,7 +377,7 @@ function getGIF (word) {
   })
 }
 
-function* indexGen (length) {
+function * indexGen (length) {
   let i = 0
   while (i < length) {
     yield i++
