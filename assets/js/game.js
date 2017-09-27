@@ -1,14 +1,14 @@
 /* eslint-env jquery */
 var be = {}
 be.questions = [{
-  question: 'hoo',
+  question: 'Who?',
   correctAnswer: 'me',
-  incorrectAnswers: ['mi', 'mo', 'he']
+  incorrectAnswers: ['you', 'them', 'us']
 },
 {
   question: 'boo',
   correctAnswer: 'ya',
-  incorrectAnswers: ['hi', 'ho', 'he']
+  incorrectAnswers: ['hoo', 'doo', 'boo']
 }]
 
 //start sequence
@@ -18,14 +18,13 @@ $.when($.ready).then(function () {
   be.questions.forEach(i => questionHandler.addQuestion(i))
   $('.alert, #answerStats, #skipButton').hide()
 
-  $('#questionOptions').children().each(function () {
-    $(this).on('click', function () {
-      if (!game.question.isAnswered()) {
-        var index = $(this).data('index')
-        game.question.selectAnswer(index).checkAnswer()
-        game.tick()
-      }
-    })
+  $('#questionOptions').on('click','li', function () {
+    if (!game.question.isAnswered()) {
+      var index = $(this).data('index')
+      game.question.selectAnswer(index)
+      timer.stop()
+      game.tick()
+    }
   })
   $('#skipButton').on('click', function () {
     game.nextQuestion().render()
@@ -50,17 +49,10 @@ var questionHandler = {
   resetMethods: ['incorrect', 'unanswered', 'all'], // incorrect, unanswered(timed out), all
 
   getQuestions: function asyncGetQuestions () {
-    //  $.ajax
     return $.ajax({
       url: this.url + this.query,
       method: 'GET'
     })
-    // .done(function (response) {
-    //   for (var i = 0; i < response.results.length; i++) {
-    //     questionHandler.questions.push(new Question(response.results[i]))
-    //   }
-    // })
-    // return this
   },
 
   reset: function resetQuestionsByMethod (method) {
@@ -171,7 +163,7 @@ var question = {
     if (!this.isAnswered()) {
       --this.timeoutSeconds
       if (!this.timeoutSeconds) {
-        this.selectAnswer(-1).checkAnswer()
+        this.selectAnswer(-1)
       }
     }
     return this.timeoutSeconds === 0
@@ -247,15 +239,13 @@ var game = {
     this.questions = questionHandler.selectUnansweredMin(10)
     console.log(this.questions)
     this.unansweredQuestions = randomizedArray(this.questions).slice()
-    // for (var i = 0; i < this.questions.length; i++) {
-    //   this.questions[i].reset()
-    // }
     this.nextQuestion()
     return this
   },
 
   tick: function gameTick () {
     if (this.question.timeout() || this.question.isAnswered()) {
+      this.question.checkAnswer()
       if (this.question.answerStatus === true) {
         this.correctAnswers++
       } else { this.incorrectAnswers++ }
@@ -283,9 +273,8 @@ var game = {
     if (this.question) {
       if (!this.question.answerOptions.length) {
         this.question.compileOptions()
-      } // .reset()
+      }
       if (!timer.isRunning) { timer.start() }
-      // timer.setCallback(this.tick.bind(this)).restart()
       this.render()
     }
     return this
@@ -298,7 +287,7 @@ var game = {
   },
 
   decorateAnswer: function decorateAnswer () {
-    if (!this.gameOver){
+    if (!this.gameOver) {
       if (this.question && this.question.isAnswered()) {
         getGIF(this.question.correctAnswer)
         if (this.question.answerStatus === false) {
@@ -334,10 +323,10 @@ var game = {
     } else {
       $('#startButton').show()
       $('#timer').parent().hide()
-      if (this.question) { //game is over
+      if (this.question) { // game is over
         setTimeout(() => getGIF('Game Over'), 3000)
         $('#question').append('<br><br> Game Over!')
-      } else { //game has not started
+      } else { // game has not started
         getGIF('Welcome')
       }
     }
@@ -347,11 +336,6 @@ var game = {
     if (this.question) {
       this.question.render()
     }
-    //} else {
-      // console.log('Game Over')
-      // $('#startButton').show()
-      // $('#timer').parent().hide()
-   // }
     this.decorateAnswer()
     return this
   }
@@ -393,4 +377,11 @@ function getGIF (word) {
       .attr('height', img.height)
       .show()
   })
+}
+
+function* indexGen (length) {
+  let i = 0
+  while (i < length) {
+    yield i++
+  }
 }
