@@ -46,7 +46,7 @@ var questionHandler = {
   query: `?amount=10&difficulty=${randomizedArray(['easy', 'medium'])[0]}&type=multiple&category=9`,
   questions: [],
   unansweredQuestions: [],
-  resetMethods: ['incorrect', 'unanswered', 'all'], // incorrect, unanswered(timed out), all
+  resetMethods: ['unanswered', 'incorrect', 'all'], // incorrect, unanswered(timed out), all
 
   getQuestions: function asyncGetQuestions () {
     return $.ajax({
@@ -91,7 +91,7 @@ var questionHandler = {
 
   addQuestion: function addQuestion (obj) {
     var question = new Question(obj).compileOptions()
-    var propNames = ['question', 'correctAnswer', 'incorrectAnswers']
+    var propNames = ['question', 'correctAnswer']
     if (!this.questions.some(f => {
       return objectsHaveSameProperties(f, question, propNames)
     })) { this.questions.push(question) }
@@ -103,7 +103,6 @@ var questionHandler = {
     this.questions.forEach(q => {
       if (!q.isAnswered()) { res.push(q) }
     })
-    console.log(res)
     this.unansweredQuestions = res
     return this
   },
@@ -281,7 +280,7 @@ var game = {
 
   delayNextQuestion: function delayedGetNextGameQuestion () {
     timer.stop()
-    setTimeout(this.nextQuestion.bind(this), 3000)
+    setTimeout(this.nextQuestion.bind(this), 4000)
     return this
   },
 
