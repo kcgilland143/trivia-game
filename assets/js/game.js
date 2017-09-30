@@ -11,7 +11,7 @@ be.questions = [{
   incorrectAnswers: ['hoo', 'doo', 'boo']
 }]
 
-//start sequence
+// start sequence
 $.when($.ready).then(function () {
   game.render()
   game.questions = questionHandler.unansweredQuestions
@@ -55,40 +55,6 @@ var questionHandler = {
     })
   },
 
-  reset: function resetQuestionsByMethod (method) {
-    switch (method.toLowerCase()) {
-      case 'all':
-        this.resetAll()
-        break
-      case 'incorrect':
-        this.resetIncorrect()
-        break
-      case 'unanswered':
-        this.resetUnanswered()
-        break
-    }
-  },
-
-  resetAll: function resetAllQuestions () {
-    this.questions.forEach(q => q.reset())
-  },
-
-  resetIncorrect: function resetIncorrectQuestions () {
-    this.questions.forEach(q => {
-      if (q.isAnswered() && !q.answerStatus) {
-        q.reset()
-      }
-    })
-  },
-
-  resetUnanswered: function resetUnansweredQuestions () {
-    this.questions.forEach(q => {
-      if (q.selectedAnswer === -1) {
-        q.reset()
-      }
-    })
-  },
-
   addQuestion: function addQuestion (obj) {
     var question = new Question(obj).compileOptions()
     var propNames = ['question', 'correctAnswer']
@@ -98,13 +64,35 @@ var questionHandler = {
     return this
   },
 
-  getUnanswered: function getUnansweredQuestions () {
+  questionGen: function * questionGen (len = 1) {
+    var questions = randomizedArray(this.questions)
+    var q
+    var mi = 0
     var res = []
-    this.questions.forEach(q => {
-      if (!q.isAnswered()) { res.push(q) }
-    })
-    this.unansweredQuestions = res
-    return this
+    while (res.length < len && mi < 3) {
+      for (var i = 0; i < questions.length; i++) {
+        q = questions[i]
+        switch (mi) {
+          case 0:
+            if (q.selectedAnswer === -1) { q.reset() }
+            break
+          case 1:
+            if (!q.answerStatus) { q.reset() }
+            break
+          case 2:
+            q.reset()
+            break
+        }
+        if (!q.isAnswered() && res.indexOf(i) !== 0) {
+          res.push(i)
+          yield q.reset()
+          if (res.length >= len) {
+            break
+          }
+        }
+      }
+      mi++
+    }
   },
 
   selectUnansweredMin: function (min) {
@@ -234,7 +222,7 @@ var game = {
 
   init: function initializeGame () {
     this.gameOver = false
-    this.questions = questionHandler.selectUnansweredMin(10)
+    this.questions = Array.from(questionHandler.questionGen(10))
     this.unansweredQuestions = randomizedArray(this.questions).slice()
     this.nextQuestion()
     return this
@@ -260,7 +248,7 @@ var game = {
 
     if (this.unansweredQuestions.length && !this.gameOver) {
       this.question = this.unansweredQuestions.pop()
-      getGIF(this.question.correctAnswer).hide()
+      getGIF(this.question.correctAnswer, $('#questionImage')).hide()
     } else {
       this.gameOver = true
       timer.stop()
@@ -322,10 +310,10 @@ var game = {
       $('#startButton').show()
       $('#timer').parent().hide()
       if (this.question) { // game is over
-        getGIF('Game Over')
+        getGIF('Game Over', $('#questionImage'))
         $('#question').append('<br><br> Game Over!')
       } else { // game has not started
-        getGIF('Welcome')
+        getGIF('Welcome', $('#questionImage'))
       }
     }
   },
@@ -353,7 +341,7 @@ function randomizedArray (arr) {
 
 function objectsHaveSameProperties (obj1, obj2, propNames) {
   var l = propNames
-  if (!l.length) {
+  if (!l || !l.length) {
     l = Object.getOwnPropertyNames(obj1)
     var r = Object.getOwnPropertyNames(obj2)
     if (l.length !== r.length) { return false }
@@ -362,7 +350,7 @@ function objectsHaveSameProperties (obj1, obj2, propNames) {
 }
 
 function getGIF (word, targetImg) {
-  targetImg = targetImg || $('#questionImage')
+  targetImg = targetImg || $('<img>')
   var offset = Math.floor(Math.random() * 3)
   var query = encodeURI(`?api_key=z3v6r9kDtDmjiyrhzJjciMd7WosSpw3B&q=${word}&limit=1&offset=${offset}&rating=G&lang=en`)
   $.ajax({
